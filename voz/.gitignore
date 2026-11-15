@@ -1,0 +1,10 @@
+# Modelo y entorno (~16 GB): se rehace con instalar.sh
+index-tts/
+# Audio generado
+cache_voz/
+*.wav
+# las voces de ejemplo sí van al repositorio
+!voces/*.wav
+*.npy
+*.log
+__pycache__/

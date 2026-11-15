@@ -1,0 +1,523 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SONQO</title>
+  <link rel="stylesheet" href="/web/style.css?v=13">
+</head>
+<body class="panel">
+  <div class="barra">
+    <div class="marca"><span class="logo"></span>SONQO</div>
+    <nav class="menu" id="menu"></nav>
+    <div class="chips">
+      <span class="chip" id="chip-pulso" hidden></span>
+      <span class="chip oscuro" id="chip-energia" hidden></span>
+      <span class="chip" id="reloj">—</span>
+      <span class="chip" data-conexion="no">sin conexión</span>
+      <button class="chip sandbox" id="b-simulador" title="Simulador" style="cursor:pointer" data-i18n="sandbox">SANDBOX · simulador</button>
+    </div>
+  </div>
+
+  <div class="franja-sandbox">
+    <span data-i18n="sb_franja">Modo sandbox: los sensores son simulados y la cámara es un video. Provoca escenarios desde el simulador.</span>
+    <button class="boton chico" data-abrir-sim data-i18n="sb_abrir">Abrir simulador</button>
+  </div>
+
+  <div class="atencion" id="atencion" hidden>
+    <span id="atencion-txt"></span>
+    <button class="boton chico" id="atencion-ir" data-i18n="i_ver_tripulante">Ver al tripulante →</button>
+  </div>
+
+  <div class="avisos" id="avisos"></div>
+
+  <div class="app">
+  <main>
+    <nav class="submenu" id="submenu" hidden></nav>
+    <!-- Inicio: lo importante en una frase, SONQO que habla, los cuatro con sus pulseras y la barra para preguntar -->
+    <section data-cap="sonqo" hidden>
+      <div class="ini-hero" id="ini-hero">
+        <div class="ini-texto">
+          <h1 class="ini-l1" id="ini-l1"></h1>
+          <p class="ini-l2" id="ini-l2"></p>
+          <p class="ini-detalle" id="ini-detalle"></p>
+        </div>
+        <div class="ini-sonqo">
+          <div class="ia-escena">
+            <canvas id="orbe" aria-hidden="true"></canvas>
+            <div class="sat-capa" id="ia-sats" aria-hidden="true"></div>
+            <p class="ia-estado" id="ia-estado"></p>
+          </div>
+          <p class="ia-dice" id="ia-dice" aria-live="polite"></p>
+          <p class="ia-motor" id="ia-motor"></p>
+        </div>
+      </div>
+      <div class="ini-fila" id="ini-fila"></div>
+      <p class="nota ini-sim" data-i18n="ini_sim"></p>
+      <form class="ia-entrada" id="ia-form">
+        <button type="button" id="ia-mic" class="boton chico" hidden><svg viewBox="0 0 20 20" width="15" height="15" aria-hidden="true"><rect x="7" y="2" width="6" height="10" rx="3" fill="currentColor"/><path d="M4 9a6 6 0 0 0 12 0M10 15v3" stroke="currentColor" stroke-width="1.6" fill="none"/></svg></button>
+        <input id="ia-texto" autocomplete="off">
+        <button id="ia-voz" type="button" class="boton chico" aria-pressed="false"><svg viewBox="0 0 20 20" width="14" height="14" aria-hidden="true"><path d="M3 8h3l4-3v10l-4-3H3z" fill="currentColor"/><path d="M13 7c1.2 1.6 1.2 4.4 0 6M15.5 5c2.3 2.8 2.3 7.2 0 10" stroke="currentColor" stroke-width="1.6" fill="none"/></svg> <span data-i18n="ia_voz">Voz</span></button>
+        <button class="boton primario chico" data-i18n="ia_enviar">Enviar</button>
+      </form>
+      <div class="ia-sugerencias" id="ia-sugerencias"></div>
+      <p class="nota" id="ia-nota"></p>
+      <div class="ia-mensajes" id="ia-mensajes"></div>
+      <div class="mision" id="guia" hidden>
+        <div class="mision-cab">
+          <p class="eyebrow" style="margin:0"><span data-i18n="g_que_hacer">Guía de demostración</span> · <span data-i18n="g_paso">Paso</span> <b id="g-num">1/8</b></p>
+          <div class="puntos" id="g-puntos"></div>
+        </div>
+        <h2 id="g-titulo"></h2>
+        <p class="hacer" id="g-hacer"></p>
+        <div class="acciones">
+          <button id="g-accion" class="boton primario grande"></button>
+          <button id="g-ver" class="boton chico"></button>
+          <button id="g-atras" class="boton chico" data-i18n="g_atras">← Anterior</button>
+          <span id="g-error" class="rojo chico"></span>
+        </div>
+        <div class="resultado" id="g-resultado" hidden><span class="ico"></span><span class="txt"></span></div>
+        <button id="g-ocultar" class="boton chico cerrar-guia" data-i18n="g_ocultar">Ocultar guía</button>
+      </div>
+
+      <div class="ini-registro">
+        <h3 data-i18n="i_bitacora_t">Registro de eventos</h3>
+        <p class="sub" data-i18n="i_bitacora_s"></p>
+        <div class="bitacora" id="bitacora"></div>
+      </div>
+    </section>
+
+    <!-- Tripulación: los cuatro de un vistazo -->
+    <section data-cap="tripulacion" hidden>
+      <div class="cabecera-consola">
+        <div>
+          <p class="eyebrow" data-i18n="i_eyebrow">Consola médica de a bordo</p>
+          <h2 class="titular" data-i18n="t_titular">Tripulación</h2>
+        </div>
+        <p class="nota" id="i-mision"></p>
+      </div>
+      <div class="sistema" id="i-sistema"></div>
+
+      <div class="grilla-trip" id="t-grilla"></div>
+
+
+    </section>
+
+    <!-- Un astronauta: monitoreo en vivo -->
+    <section data-cap="astronauta" hidden>
+      <div class="cabecera-consola">
+        <div>
+          <p class="eyebrow" id="a-ubicacion"></p>
+          <h2 class="titular"><span id="a-nombre">MS-2</span></h2>
+          <p class="chico gris" id="a-fuentes" style="margin:4px 0 0"></p>
+        </div>
+        <div class="fila-botones">
+          <a class="boton chico" id="a-mi-estado" target="_blank" rel="noopener" data-i18n="a_mi_estado">Abrir su Mi estado ↗</a>
+          <button class="boton chico" id="a-tecnico" data-i18n="a_tecnico">Ver el detalle técnico →</button>
+        </div>
+      </div>
+
+      <div class="tarjeta" id="i-arca" hidden style="margin-bottom:16px">
+        <div class="rejilla r-der" style="align-items:center">
+          <div>
+            <p class="eyebrow" style="margin:0" data-i18n="i_arca_eyebrow">ARCA · autorizado</p>
+            <h3 style="font-size:22px;margin:6px 0" data-i18n="arca_preparando">Preparándose (simulado)</h3>
+            <p class="sub" id="i-arca-txt"></p>
+            <p class="nota" data-i18n="c8_video_nota"></p>
+          </div>
+          <video id="i-arca-video" class="arca" poster="/web/media/arca.jpg" controls playsinline preload="none"><source src="/web/media/arca.webm" type="video/webm"><source src="/web/media/arca.mp4" type="video/mp4"></video>
+        </div>
+      </div>
+
+      <div class="rejilla r-inicio">
+        <div class="tarjeta" id="a-sin-camara" hidden>
+          <h3 data-i18n="a_sensores_t">Sensores de este tripulante</h3>
+          <p class="sub" data-i18n="a_sin_camara">En este módulo no hay cámara: lo vigilan el radar, la térmica y la pulsera (simulados).</p>
+          <div class="cifras" id="a-por-fuente"></div>
+          <p class="nota" style="margin:12px 0 0" id="a-coinciden"></p>
+        </div>
+        <div class="tarjeta" id="a-camara">
+          <h3 data-i18n="c2_vista">Cámara de color · en vivo</h3>
+          <div class="vista" id="ivista">
+            <img id="ivista-img" alt="" hidden>
+            <span class="etq-vivo" id="ivista-vivo" hidden data-i18n="en_vivo">EN VIVO</span>
+            <p class="vacio" id="ivista-vacio"></p>
+          </div>
+          <p style="margin:10px 0 0"><button class="boton chico" data-encender data-i18n="g_btn_camara">Encender la cámara</button></p>
+          <div class="cifras">
+            <div><span data-i18n="fuente_camara_rgb">cámara</span><b id="i-cam">—</b></div>
+            <div><span data-i18n="fuente_radar">radar</span><b id="i-radar">—</b></div>
+            <div hidden><span data-i18n="fuente_pulsera">pulsera</span><b id="i-pulsera">—</b></div>
+            <div><span>&nbsp;</span><span id="i-coinciden" class="insignia gris">—</span></div>
+          </div>
+          <p class="nota" style="margin:10px 0 0" id="ivista-nota"></p>
+        </div>
+        <div class="tarjeta">
+          <p class="nota" style="margin:0" id="a-quien"></p>
+          <p style="margin:10px 0 4px"><span id="i-estado" class="estado-pill"></span></p>
+          <p class="sub" id="i-frase" style="margin:0 0 6px"></p>
+          <div class="progreso" id="i-calib" hidden><i></i></div>
+          <div id="i-inds"></div>
+          <div id="i-rec" class="rec" hidden>
+            <p class="rec-t"><span class="insignia" id="i-rec-nivel"></span> <b data-i18n="i_rec_t">SONQO recomienda</b></p>
+            <ol class="pasos" id="i-rec-pasos"></ol>
+            <p class="chico" id="i-rec-estado"></p>
+            <a class="boton chico" id="i-rec-ir" target="_blank" rel="noopener" data-i18n="i_ir_estado">Ver la pantalla del tripulante →</a>
+          </div>
+          <p class="chico gris" id="i-energia" style="margin:12px 0 0" hidden></p>
+        </div>
+      </div>
+
+      <div class="tarjeta" style="margin-top:16px">
+        <h3 data-i18n="a_graf_t">Últimos 3 minutos frente a su normal</h3>
+        <div class="graficos" id="a-graficos"></div>
+      </div>
+
+      <div class="tarjeta" style="margin-top:16px">
+        <h3 data-i18n="a_rutina_t">Mediciones de rutina</h3>
+        <div id="a-rutina"></div>
+      </div>
+    </section>
+
+    <!-- Sensores -->
+    <section data-cap="datos" hidden>
+      <p class="eyebrow" data-i18n="c1_eyebrow"></p>
+      <h2 class="titular" data-i18n="c1_titular"></h2>
+      <p class="bajada" data-i18n="c1_bajada"></p>
+      <div class="rejilla r-der">
+        <div class="tarjeta">
+          <p class="nota" style="margin:0 0 8px"><span data-tripulante>MS-2</span> · <span data-i18n="c1_escena"></span></p>
+          <div class="escena">
+            <svg viewBox="0 0 400 270" id="escena">
+              <defs><linearGradient id="haz" x1="1" x2="0"><stop offset="0" stop-color="#6889f7" stop-opacity=".3"/><stop offset="1" stop-color="#6889f7" stop-opacity="0"/></linearGradient></defs>
+              <polygon id="haz-camara" points="300,68 120,40 120,110" fill="url(#haz)" hidden/>
+              <circle cx="115" cy="70" r="26" fill="#ecebe6" stroke="#bdbcb5"/>
+              <rect x="82" y="102" width="66" height="96" rx="28" fill="#ecebe6" stroke="#bdbcb5"/>
+              <path d="M140 125 Q175 140 190 150" stroke="#bdbcb5" stroke-width="12" stroke-linecap="round" fill="none"/>
+              <path d="M140 125 Q175 140 190 150" stroke="#ecebe6" stroke-width="10" stroke-linecap="round" fill="none"/>
+              <rect x="94" y="190" width="16" height="62" rx="7" fill="#ecebe6" stroke="#bdbcb5"/>
+              <rect x="120" y="190" width="16" height="62" rx="7" fill="#ecebe6" stroke="#bdbcb5"/>
+              <line x1="60" y1="254" x2="180" y2="254" stroke="#d6d5cf" stroke-width="3"/>
+              <rect x="285" y="40" width="34" height="140" rx="9" fill="#161619"/>
+              <g id="lentes"></g>
+              <text x="302" y="198" text-anchor="middle" font-family="ui-monospace,monospace" font-size="9" fill="#555" data-i18n="c1_modulo">MÓDULO SONQO</text>
+              <line x1="230" y1="20" x2="230" y2="254" stroke="#e2e1db"/>
+            </svg>
+          </div>
+          <p class="nota explica" style="margin:10px 0 0" data-i18n="c1_nota"></p>
+        </div>
+        <div class="rejilla r2" id="sensores"></div>
+      </div>
+    </section>
+
+    <!-- Señales -->
+    <section data-cap="senales" hidden>
+      <p class="eyebrow" data-i18n="c2_eyebrow"></p>
+      <h2 class="titular" data-i18n="c2_titular"></h2>
+      <p class="bajada" data-i18n="c2_bajada"></p>
+      <div class="rejilla r-der">
+        <div class="tarjeta">
+          <h3 data-i18n="c2_vista">Cámara de color · en vivo</h3>
+          <div class="vista" id="vista">
+            <img id="vista-img" alt="" hidden>
+            <span class="etq-vivo" id="vista-vivo" hidden data-i18n="en_vivo">EN VIVO</span>
+            <p class="vacio" id="vista-vacio"></p>
+          </div>
+          <p style="margin:10px 0 0"><button class="boton chico" data-encender data-i18n="g_btn_camara">Encender la cámara</button></p>
+          <p class="nota" style="margin:10px 0 0" id="vista-nota"></p>
+        </div>
+        <div style="display:grid;gap:16px;align-content:start">
+          <div class="tarjeta">
+            <h3 data-i18n="c2_coinciden_t">Dos sensores deben coincidir</h3>
+            <p class="sub" data-i18n="c2_coinciden_s"></p>
+            <div class="cifras">
+              <div><span data-i18n="fuente_camara_rgb">cámara</span><b id="s-cam">—</b></div>
+              <div><span data-i18n="fuente_radar">radar</span><b id="s-radar">—</b></div>
+              <div hidden><span data-i18n="fuente_pulsera">pulsera</span><b id="s-pulsera">—</b></div>
+              <div><span>&nbsp;</span><span id="s-coinciden" class="insignia gris">—</span></div>
+            </div>
+          </div>
+          <div class="tarjeta">
+            <h3 data-i18n="p_oxi">Frente al oxímetro</h3>
+            <form id="f-oxi" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+              <label class="chico"><span data-i18n="p_oxi_campo">Oxímetro (lpm)</span>
+                <input id="i-oxi" type="number" min="30" max="220" step="1" required></label>
+              <button class="boton chico" type="submit" data-i18n="p_registrar">Registrar</button>
+            </form>
+            <div class="cifras">
+              <div><span data-i18n="p_diferencia">Diferencia</span><b id="o-dif">—</b></div>
+              <div><span data-i18n="p_error60">Error medio (60 s)</span><b id="o-err">—</b></div>
+              <div><span data-i18n="p_lecturas">Lecturas</span><b id="o-n">0</b></div>
+            </div>
+            <p class="nota" id="o-nota"></p>
+          </div>
+        </div>
+      </div>
+      <p id="s-aviso" class="aviso" hidden></p>
+      <div class="tuberia" style="margin-top:16px">
+        <div class="tarjeta"><h3 data-i18n="c2_cruda">1 · Señal cruda</h3><canvas id="cv-cruda"></canvas><p class="nota" data-i18n="c2_cruda_n"></p></div>
+        <div class="flecha">›</div>
+        <div class="tarjeta"><h3 data-i18n="c2_filtro">2 · Filtro</h3><canvas id="cv-filtro"></canvas><p class="nota" data-i18n="c2_filtro_n"></p></div>
+        <div class="flecha">›</div>
+        <div class="tarjeta"><h3 data-i18n="c2_ritmo">3 · Ritmo</h3><canvas id="cv-ritmo"></canvas><p class="nota" data-i18n="c2_ritmo_n"></p></div>
+        <div class="flecha">›</div>
+        <div class="tarjeta"><h3 data-i18n="c2_indicador">4 · Indicador</h3>
+          <div class="cifra-grande" id="s-pulso">—</div>
+          <p class="nota" style="margin:8px 0 4px" id="s-calidad"></p>
+          <div class="progreso"><i id="s-calidad-barra" style="width:0;background:var(--verde)"></i></div>
+          <p class="nota" data-i18n="c2_indicador_n"></p></div>
+      </div>
+    </section>
+
+    <!-- Energía -->
+    <section data-cap="energia" hidden>
+      <p class="eyebrow" data-i18n="c3_eyebrow"></p>
+      <h2 class="titular" data-i18n="c3_titular"></h2>
+      <p class="bajada" data-i18n="c3_bajada"></p>
+      <div class="rejilla r-izq">
+        <div class="escalera" id="escalera"></div>
+        <div class="tarjeta">
+          <p class="nota" style="margin:0;display:flex;justify-content:space-between"><span data-i18n="c3_consumo">CONSUMO AHORA · UN MÓDULO</span><span id="e-chip" class="chip"></span></p>
+          <div class="cifra-grande" id="e-w" style="margin:10px 0">—</div>
+          <canvas id="cv-vatios" class="medio"></canvas>
+          <p class="nota" style="text-align:right;margin:2px 0 0" data-i18n="c3_log">escala logarítmica · últimos 5 min</p>
+          <div class="cifras">
+            <div><span data-i18n="p_promedio">Promedio</span><b id="e-prom">—</b></div>
+            <div><span data-i18n="p_wh">Energía usada</span><b id="e-wh">—</b></div>
+            <div><span data-i18n="c3_en_e0">Tiempo en E0</span><b id="e-e0">—</b></div>
+          </div>
+          <p class="chico" style="margin:12px 0 0"><b id="e-cam"></b></p>
+          <p class="chico gris" style="margin:4px 0 0" id="e-motivo"></p>
+          <p class="nota" style="margin:12px 0 0" data-i18n="p_referencia"></p>
+          <p class="nota" style="margin:2px 0 0" data-i18n="p_modelo"></p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Gemelo -->
+    <section data-cap="gemelo" hidden>
+      <p class="eyebrow" data-i18n="c4_eyebrow"></p>
+      <h2 class="titular" data-i18n="c4_titular"></h2>
+      <p class="bajada" data-i18n="c4_bajada"></p>
+      <div class="rejilla r-izq">
+        <div class="tarjeta">
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap">
+            <p class="nota" style="margin:0" id="gm-etq"></p>
+            <div style="display:flex;gap:6px">
+              <button class="pildora activa" data-ind="pulso" data-i18n="ind_pulso">Pulso</button>
+              <button class="pildora" data-ind="resp" data-i18n="ind_resp">Respiración</button>
+              <button class="pildora" data-ind="temp_piel" data-i18n="ind_temp_corto">Piel</button>
+            </div>
+          </div>
+          <canvas id="cv-gemelo" class="alto" style="margin-top:8px"></canvas>
+          <div class="chico gris" style="display:flex;gap:16px;flex-wrap:wrap;margin-top:6px">
+            <span><b style="color:#161619">—</b> <span data-i18n="l_medido"></span></span>
+            <span><b style="color:var(--verde)">■</b> <span data-i18n="l_banda"></span></span>
+            <span><b style="color:#b4c4fb">■</b> <span data-i18n="l_intervalo"></span></span>
+            <span><b style="color:#6889f7">- -</b> <span data-i18n="l_prediccion"></span></span>
+          </div>
+          <details><summary data-i18n="c4_detalle">Detalle técnico</summary><p class="nota" id="gm-detalle"></p></details>
+        </div>
+        <div class="tarjeta negra" style="padding:14px">
+          <p class="nota" style="margin:0 0 8px"><span data-i18n="c4_holo">GEMELO DE</span> <span data-tripulante>MS-2</span></p>
+          <div class="holo" id="holo">
+            <svg viewBox="0 0 300 420">
+              <defs><linearGradient id="gradEscaneo" x1="0" x2="0" y1="0" y2="1">
+                <stop offset="0" stop-color="#89e5fc" stop-opacity="0"/><stop offset=".5" stop-color="#89e5fc" stop-opacity=".18"/><stop offset="1" stop-color="#89e5fc" stop-opacity="0"/></linearGradient></defs>
+              <ellipse class="pecho" cx="150" cy="160" rx="38" ry="30"/>
+              <g class="contorno">
+                <ellipse cx="150" cy="58" rx="27" ry="33"/>
+                <path d="M138 90 L162 90 L163 104 L137 104 Z"/>
+                <path d="M104 112 Q150 98 196 112 Q206 170 196 238 Q150 252 104 238 Q94 170 104 112 Z"/>
+                <path d="M104 114 Q84 128 80 170 Q76 210 72 250 L84 252 Q92 210 98 176 L106 150"/>
+                <path d="M196 114 Q216 128 220 170 Q224 210 228 250 L216 252 Q208 210 202 176 L194 150"/>
+                <path d="M110 238 Q112 320 118 400 L140 400 Q144 320 148 246"/>
+                <path d="M190 238 Q188 320 182 400 L160 400 Q156 320 152 246"/>
+              </g>
+              <g class="malla">
+                <path d="M106 140 Q150 150 194 140"/><path d="M100 175 Q150 186 200 175"/><path d="M100 210 Q150 220 200 210"/>
+                <path d="M150 100 L150 245"/><path d="M114 290 Q130 294 146 290"/><path d="M154 290 Q170 294 186 290"/>
+                <path d="M118 350 Q129 353 140 350"/><path d="M160 350 Q171 353 182 350"/>
+              </g>
+              <path class="corazon" d="M168 150 C168 144 160 142 158 148 C156 142 148 144 148 150 C148 157 158 162 158 165 C158 162 168 157 168 150 Z"/>
+              <rect class="escaneo" x="0" y="0" width="300" height="40"/>
+            </svg>
+            <div class="etq" id="h-temp" style="left:12px;top:6%"></div>
+            <div class="etq" id="h-pulso" style="right:12px;top:30%;text-align:right"></div>
+            <div class="etq" id="h-resp" style="left:12px;top:44%"></div>
+            <div class="etq" id="h-estado" style="left:0;right:0;bottom:10px;text-align:center"></div>
+          </div>
+          <p class="nota" style="margin:10px 0 0" id="h-normal"></p>
+          <p class="nota" style="margin:2px 0 0" id="h-pred"></p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Mi estado -->
+    <section data-cap="estado" hidden>
+      <p class="eyebrow" data-i18n="c5_eyebrow"></p>
+      <h2 class="titular" data-i18n="c5_titular"></h2>
+      <p class="bajada" data-i18n="c5_bajada"></p>
+      <div id="marco-estado"></div>
+    </section>
+
+    <!-- Tierra -->
+    <section data-cap="tierra" hidden>
+      <p class="eyebrow" data-i18n="c6_eyebrow"></p>
+      <h2 class="titular" data-i18n="c6_titular"></h2>
+      <p class="bajada" data-i18n="c6_bajada"></p>
+      <div id="marco-tierra"></div>
+    </section>
+
+    <!-- Caja negra -->
+    <section data-cap="caja" hidden>
+      <p class="eyebrow" data-i18n="c7_eyebrow"></p>
+      <h2 class="titular" data-i18n="c7_titular"></h2>
+      <p class="bajada" data-i18n="c7_bajada"></p>
+      <div class="tarjeta" style="margin-bottom:16px;overflow-x:auto">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap">
+          <h3 data-i18n="cn_todas_t">Todas las cajas negras</h3>
+          <button class="boton chico" id="cn-actualizar" data-i18n="cn_actualizar">Actualizar lista</button>
+        </div>
+        <p class="sub" data-i18n="cn_todas_s">Una por tripulante y por corrida. Cualquiera se puede verificar y reproducir.</p>
+        <table id="cn-tabla"></table>
+      </div>
+      <div class="rejilla r-izq">
+        <div class="tarjeta">
+          <h3 data-i18n="cn_vivo_t">En vivo · tripulante principal</h3>
+          <p class="nota" style="margin:0 0 6px" id="caja-archivo"></p>
+          <div id="registros"></div>
+        </div>
+        <div class="tarjeta">
+          <h3 data-i18n="c7_verificar_t">¿Alguien la alteró?</h3>
+          <p class="sub" data-i18n="c7_verificar_s"></p>
+          <button id="b-verificar" class="boton primario" data-i18n="g_btn_verificar">Verificar y reproducir</button>
+          <div id="verif" style="margin-top:14px"></div>
+          <p class="nota explica" style="margin:14px 0 0" data-i18n="c7_terminal"></p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ARCA -->
+    <section data-cap="arca" hidden>
+      <p class="eyebrow" data-i18n="c8_eyebrow"></p>
+      <h2 class="titular" data-i18n="c8_titular"></h2>
+      <p class="bajada" data-i18n="c8_bajada"></p>
+      <div class="rejilla r-der">
+        <div class="tarjeta">
+          <p class="nota" style="margin:0" data-i18n="c8_estado_t">ESTADO DEL ARCA</p>
+          <p style="margin:10px 0"><span id="arca-estado" class="estado-pill"></span></p>
+          <p id="arca-detalle" class="sub"></p>
+          <table class="chico">
+            <tr><td data-i18n="c8_nivel">Nivel requerido</td><td><span class="insignia">N2 · <span data-i18n="c8_con_si">con el «sí» del tripulante</span></span></td></tr>
+            <tr><td data-i18n="c8_energia">Energía</td><td data-i18n="c8_energia_v">75 W en vigilancia · 307 W en un episodio (propuesta)</td></tr>
+            <tr><td data-i18n="c8_falla">Ante una falla</td><td data-i18n="c8_falla_v">agujas fuera, brazos retirados, rayos X bloqueados</td></tr>
+          </table>
+          <p class="aviso gris" data-i18n="c8_aviso"></p>
+        </div>
+        <div class="tarjeta">
+          <video id="arca-video" class="arca" poster="/web/media/arca.jpg" controls playsinline preload="metadata"><source src="/web/media/arca.webm" type="video/webm"><source src="/web/media/arca.mp4" type="video/mp4"></video>
+          <p class="nota" style="margin:8px 0 0" data-i18n="c8_video_nota"></p>
+        </div>
+      </div>
+      <div class="tarjeta" style="margin-top:16px;overflow-x:auto">
+        <h3 data-i18n="ah_titulo">Historial de uso</h3>
+        <p class="sub" data-i18n="ah_sub">Cada vez que un tripulante autorizó el ARCA con su «sí». Sale de las cajas negras, también de corridas anteriores.</p>
+        <table id="arca-hist"></table>
+        <p class="gris chico" id="arca-hist-vacio"></p>
+      </div>
+    </section>
+
+    <!-- Mediciones de rutina -->
+    <section data-cap="rutina" hidden>
+      <p class="eyebrow" data-i18n="r_eyebrow">Mediciones de rutina</p>
+      <h2 class="titular" data-i18n="r_titular">Una foto de cada tripulante, a intervalos fijos</h2>
+      <p class="bajada" id="r-bajada"></p>
+      <div class="fila-botones" id="r-filtro" style="margin-bottom:12px"></div>
+      <div class="tarjeta" style="overflow-x:auto"><table id="r-tabla"></table><p class="gris chico" id="r-vacio"></p></div>
+    </section>
+
+    <!-- Datos y fuentes de NASA -->
+    <section data-cap="nasa" hidden>
+      <p class="eyebrow" data-i18n="n_eyebrow"></p>
+      <h2 class="titular" data-i18n="n_titular"></h2>
+      <p class="bajada" data-i18n="n_bajada"></p>
+      <div class="tarjeta" style="overflow-x:auto">
+        <table class="tabla-nasa">
+          <tr><th data-i18n="n_h_fuente">Fuente</th><th data-i18n="n_h_dato">El dato</th><th data-i18n="n_h_fija">Qué fija en SONQO</th><th data-i18n="n_h_donde">Dónde se ve</th><th data-i18n="n_h_tipo">Uso</th><th></th></tr>
+            <tr><td><b data-i18n="n1_fuente"></b><span class="nota" style="display:block" data-i18n="n1_org"></span></td><td data-i18n="n1_dato"></td><td data-i18n="n1_fija"></td><td data-i18n="n1_donde"></td><td><span class="insignia gris" data-i18n="n1_tipo"></span></td><td><a class="enlace" target="_blank" rel="noopener" href="https://ntrs.nasa.gov/api/citations/20170000500/downloads/20170000500.pdf" data-i18n="n_abrir">abrir</a></td></tr>
+            <tr><td><b data-i18n="n2_fuente"></b><span class="nota" style="display:block" data-i18n="n2_org"></span></td><td data-i18n="n2_dato"></td><td data-i18n="n2_fija"></td><td data-i18n="n2_donde"></td><td><span class="insignia gris" data-i18n="n2_tipo"></span></td><td><a class="enlace" target="_blank" rel="noopener" href="https://www.nasa.gov/nasa-integrated-medical-model-imm-overview/" data-i18n="n_abrir">abrir</a></td></tr>
+            <tr><td><b data-i18n="n3_fuente"></b><span class="nota" style="display:block" data-i18n="n3_org"></span></td><td data-i18n="n3_dato"></td><td data-i18n="n3_fija"></td><td data-i18n="n3_donde"></td><td><span class="insignia gris" data-i18n="n3_tipo"></span></td><td><a class="enlace" target="_blank" rel="noopener" href="https://ntrs.nasa.gov/api/citations/20220013418/downloads/ASCEND-Communication%20Delays%2C%20Disruptions%2C%20and%20Blackouts%20for%20Crewed%20Mars%20Missions.pdf" data-i18n="n_abrir">abrir</a></td></tr>
+            <tr><td><b data-i18n="n4_fuente"></b><span class="nota" style="display:block" data-i18n="n4_org"></span></td><td data-i18n="n4_dato"></td><td data-i18n="n4_fija"></td><td data-i18n="n4_donde"></td><td><span class="insignia gris" data-i18n="n4_tipo"></span></td><td><a class="enlace" target="_blank" rel="noopener" href="https://www.swri.org/newsroom/press-releases/swri-led-team-calculates-the-radiation-exposure-associated-trip-mars" data-i18n="n_abrir">abrir</a></td></tr>
+            <tr><td><b data-i18n="n5_fuente"></b><span class="nota" style="display:block" data-i18n="n5_org"></span></td><td data-i18n="n5_dato"></td><td data-i18n="n5_fija"></td><td data-i18n="n5_donde"></td><td><span class="insignia gris" data-i18n="n5_tipo"></span></td><td><a class="enlace" target="_blank" rel="noopener" href="https://www.nasa.gov/osdr-latest-news-i4-mission-datasets/" data-i18n="n_abrir">abrir</a></td></tr>
+            <tr><td><b data-i18n="n6_fuente"></b><span class="nota" style="display:block" data-i18n="n6_org"></span></td><td data-i18n="n6_dato"></td><td data-i18n="n6_fija"></td><td data-i18n="n6_donde"></td><td><span class="insignia gris" data-i18n="n6_tipo"></span></td><td><a class="enlace" target="_blank" rel="noopener" href="https://www.nasa.gov/hrp" data-i18n="n_abrir">abrir</a></td></tr>
+        </table>
+      </div>
+      <div class="rejilla r2" style="margin-top:16px">
+        <div class="tarjeta"><h3 data-i18n="n_honesto_t"></h3><p class="sub" style="margin:0" data-i18n="n_honesto"></p></div>
+        <div class="tarjeta"><h3 data-i18n="n_logo_t"></h3><p class="sub" style="margin:0" data-i18n="n_logo"></p></div>
+      </div>
+    </section>
+  </main>
+  </div>
+
+  <!-- Simulador (sandbox) -->
+  <aside class="cajon" id="simulador" hidden>
+    <button class="boton chico cerrar" id="sim-cerrar">✕</button>
+    <p class="eyebrow" style="margin-top:0" data-i18n="sim_eyebrow">SANDBOX</p>
+    <h2 data-i18n="sim_titulo">Simulador</h2>
+    <p class="sub" style="margin:6px 0 12px" data-i18n="sim_sub"></p>
+    <div class="grupo">
+      <p data-i18n="sim_escenario">Escenario del tripulante</p>
+      <div class="fila-botones" id="sim-trip" style="margin-bottom:8px"></div>
+      <div class="fila-botones">
+        <button class="boton chico" data-radar="normal" data-i18n="esc_normal">Reposo</button>
+        <button class="boton chico" data-radar="desvio" data-i18n="esc_desvio">Taquicardia</button>
+        <button class="boton chico" data-radar="falla" data-i18n="esc_falla">Sensor dañado</button>
+      </div>
+      <p class="aviso" id="esc-espera" data-i18n="esc_espera" hidden></p>
+      <p class="nota" data-i18n="sim_escenario_n"></p>
+    </div>
+    <div class="grupo">
+      <p data-i18n="sim_camara">Cámara y energía</p>
+      <div class="fila-botones">
+        <button class="boton chico" id="c-mantener" aria-pressed="false" data-i18n="c_mantener"></button>
+        <button class="boton chico" id="c-verificar" data-i18n="c_verificar"></button>
+      </div>
+      <p class="nota" data-i18n="sim_camara_n"></p>
+    </div>
+    <div class="grupo">
+      <p data-i18n="sim_episodio">Episodio y enlace</p>
+      <div class="fila-botones">
+        <button class="boton chico" id="c-cerrar" data-i18n="c_cerrar"></button>
+        <button class="boton chico" id="c-t30" data-i18n="c_t30"></button>
+      </div>
+    </div>
+    <div class="grupo">
+      <p data-i18n="sim_gemelo">Gemelo</p>
+      <div class="fila-botones">
+        <button class="boton chico" id="c-reiniciar" data-i18n="c_reiniciar"></button>
+      </div>
+      <p class="nota" data-i18n="sim_gemelo_n"></p>
+    </div>
+    <div class="grupo">
+      <p data-i18n="sim_tour">Recorrido guiado</p>
+      <div class="fila-botones">
+        <button class="boton chico" id="c-tour" aria-pressed="false" data-i18n="sim_tour_b">Guía de demostración</button>
+        <button class="boton chico" id="c-demo" data-i18n="g_reiniciar"></button>
+      </div>
+      <p class="nota" data-i18n="sim_tour_n"></p>
+    </div>
+  </aside>
+
+  <footer data-i18n="pie">Prototipo estudiantil · NASA Space Apps Challenge 2026 · No es un dispositivo médico</footer>
+
+  <script src="/web/common.js?v=13"></script>
+  <script src="/web/esfera.js?v=13"></script>
+  <script src="/web/voz.js?v=13"></script>
+  <script src="/web/presentacion.js?v=13"></script>
+  <script src="/web/asistente.js?v=13"></script>
+  <script src="/web/inicio.js?v=13"></script>
+  <script src="/web/pulseras.js?v=13"></script>
+</body>
+</html>

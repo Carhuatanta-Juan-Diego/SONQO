@@ -1,0 +1,264 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SONQO · Mi estado</title>
+  <link rel="stylesheet" href="/web/style.css?v=9">
+</head>
+<body class="estado">
+  <main>
+    <div class="encabezado">
+      <span class="logo"></span>
+      <div>
+        <h1 data-i18n="titulo_estado">SONQO · Mi estado</h1>
+        <div class="meta"><span data-tripulante>—</span> · <span id="ubicacion" data-i18n="modulo">módulo de trabajo</span></div>
+      </div>
+      <div class="der">
+        <span id="reloj" class="reloj">—</span>
+        <span class="chip" data-i18n="sin_contacto">medido sin contacto</span>
+        <span class="chip" data-conexion="no">sin conexión</span>
+      </div>
+    </div>
+
+    <div class="rejilla r-izq">
+      <section class="tarjeta">
+        <p class="chico" style="margin:0 0 10px"><b data-i18n="como_estas">Cómo estás ahora</b></p>
+        <span id="g-pill" class="estado-pill aprende" data-i18n="esperando">Esperando datos…</span>
+        <p id="g-frase" style="margin:10px 0 6px"></p>
+        <div id="g-calib" hidden>
+          <div class="progreso"><i id="g-calib-barra" style="width:0"></i></div>
+          <p id="g-calib-txt" class="nota" style="margin:6px 0 4px"></p>
+        </div>
+        <div id="filas" style="margin-top:12px"></div>
+        <p class="nota" style="margin:10px 0 0" data-i18n="pie_gemelo"></p>
+      </section>
+
+      <section class="tarjeta" id="rec">
+        <p style="margin:0;display:flex;gap:8px;align-items:center"><span class="logo" style="width:20px;height:20px;border-radius:5px"></span>
+          <b id="rec-titulo" data-i18n="rec_titulo">SONQO recomienda</b></p>
+        <p style="margin:10px 0 0"><span id="rec-nivel" class="insignia" hidden></span></p>
+        <p id="rec-vacio" class="gris" style="margin:12px 0"></p>
+        <ol id="rec-pasos" class="pasos" hidden></ol>
+        <div id="rec-botones" style="display:flex;gap:10px;flex-wrap:wrap" hidden>
+          <button id="b-si" class="boton primario" data-i18n="boton_si">Sí, adelante</button>
+          <button id="b-no" class="boton" data-i18n="boton_no">Ahora no</button>
+        </div>
+        <p id="rec-decide" class="nota" style="margin:10px 0 0" hidden data-i18n="decides_tu"></p>
+        <div id="rec-exito" class="exito" style="margin-top:14px" hidden>
+          <span class="check"><svg width="12" height="12" viewBox="0 0 12 12"><path d="M2 6.5 L5 9 L10 3" stroke="#fff" stroke-width="2" fill="none"/></svg></span>
+          <span id="rec-exito-txt"></span>
+          <span id="rec-hora" class="hora"></span>
+        </div>
+        <p id="rec-no" class="aviso gris" hidden></p>
+      </section>
+    </div>
+
+    <section class="tarjeta" id="arca" style="margin-top:16px" hidden>
+      <p style="margin:0 0 10px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+        <b data-i18n="arca_titulo">ARCA · cápsula médica</b>
+        <span class="estado-pill aprende" data-i18n="arca_preparando">Preparándose (simulado)</span>
+        <span class="insignia" data-i18n="arca_tu_si">autorizado con tu «sí» · N2</span>
+      </p>
+      <video id="arca-video" class="arca" poster="/web/media/arca.jpg" controls playsinline preload="auto"><source src="/web/media/arca.webm" type="video/webm"><source src="/web/media/arca.mp4" type="video/mp4"></video>
+      <p class="nota" style="margin:8px 0 0" data-i18n="c8_video_nota"></p>
+    </section>
+  </main>
+
+  <footer data-i18n="pie">Prototipo estudiantil · NASA Space Apps Challenge 2026 · No es un dispositivo médico</footer>
+
+  <template id="t-fila">
+    <div class="ind">
+      <div><span class="nombre"></span><span class="fuente"></span></div>
+      <div class="valor">—</div>
+      <div class="pista-col"><div class="pista"><div class="banda"></div><div class="punto" hidden></div></div>
+        <div class="normal"></div></div>
+    </div>
+  </template>
+
+  <script src="/web/common.js?v=9"></script>
+  <script>
+    // Pantalla del astronauta. Sin animaciones: solo se reescribe lo que cambia de lo que se muestra.
+    const S = SONQO;
+    const $ = (id) => document.getElementById(id);
+    const IND = ["pulso", "resp", "temp_piel"];
+    const ESCALA = { pulso: [40, 160], resp: [5, 35], temp_piel: [35.5, 38] };
+    const DEC = { pulso: 0, resp: 0, temp_piel: 1 };
+    const st = { vital: null, gemelo: {}, ultimo: {}, evento: null, rec: null, decision: null, cerrado: false };
+    // ?t=MS-1: la misma pantalla para un compañero (sus datos llegan en el tema «tripulacion»)
+    const PEDIDO = new URLSearchParams(location.search).get("t");
+    let otro = null;
+
+    function crearFilas() {
+      for (const ind of IND) {
+        const f = $("t-fila").content.firstElementChild.cloneNode(true);
+        f.dataset.ind = ind;
+        $("filas").appendChild(f);
+      }
+    }
+
+    function pct(ind, v) {
+      const [a, b] = ESCALA[ind];
+      return Math.max(0, Math.min(100, (100 * (v - a)) / (b - a)));
+    }
+
+    function calibrando() {
+      const c = Object.values(st.gemelo).map((g) => g.calibracion).filter(Boolean);
+      if (!c.length) return null;
+      const s = Math.min(...c.map((x) => x[0]));
+      return s < c[0][1] ? [s, c[0][1]] : null;
+    }
+
+    function dibujarFila(ind) {
+      const f = document.querySelector(`.ind[data-ind="${ind}"]`);
+      const v = st.vital, g = st.gemelo[ind];
+      const actual = v && v[ind] !== null && v[ind] !== undefined;
+      if (actual) st.ultimo[ind] = { valor: v[ind], fuentes: v.fuentes[ind], sim: v.sim };
+      const u = st.ultimo[ind];
+      S.escribir(f.querySelector(".nombre"), S.t(`ind_${ind}`));
+      let fuente = u ? u.fuentes.map((x) => S.etiquetaFuente(x, u.sim[x])).join(" + ") : "";
+      if (u && !actual) fuente += ` · ${S.t("ultima")}`;
+      S.escribir(f.querySelector(".fuente"), fuente);
+      const val = f.querySelector(".valor");
+      const texto = u ? S.num(u.valor, DEC[ind]) : "—";
+      if (val.dataset.txt !== texto) {
+        val.dataset.txt = texto;
+        val.innerHTML = "";
+        val.append(texto, Object.assign(document.createElement("small"), { textContent: S.t(`u_${ind}`) }));
+      }
+      const calib = !g || !g.normal;
+      val.className = "valor " + (calib ? "" : g.fuera ? "fuera" : "dentro");
+      const banda = f.querySelector(".banda"), punto = f.querySelector(".punto");
+      if (g && g.normal) {
+        const [lo, hi] = g.normal;
+        S.escribir(f.querySelector(".normal"), S.t("tu_normal", { lo: S.num(lo, DEC[ind]), hi: S.num(hi, DEC[ind]) }));
+        banda.style.left = `${pct(ind, lo)}%`;
+        banda.style.width = `${pct(ind, hi) - pct(ind, lo)}%`;
+      } else {
+        S.escribir(f.querySelector(".normal"), S.t("aprendiendo_corto"));
+        banda.style.width = "0";
+      }
+      punto.hidden = !u;
+      if (u) punto.style.left = `${pct(ind, u.valor)}%`;
+      punto.classList.toggle("fuera", Boolean(g && g.fuera));
+    }
+
+    function dibujarGeneral() {
+      const calib = calibrando();
+      let clave = "dentro", clase = "dentro", frase = "frase_dentro";
+      if (st.evento) { clave = "fuera"; clase = "fuera"; frase = `frase_${st.evento.regla.toLowerCase()}`; }
+      else if (calib) { clave = "aprendiendo"; clase = "aprende"; frase = "calib_nota"; }
+      else if (st.cerrado) { frase = "frase_r4"; }
+      else if (!st.vital) { clave = "esperando"; clase = "aprende"; frase = ""; }
+      const pill = $("g-pill");
+      pill.removeAttribute("data-i18n");
+      S.escribir(pill, S.t(clave));
+      pill.className = `estado-pill ${clase}`;
+      S.escribir($("g-frase"), frase ? S.t(frase) : "");
+      $("g-calib").hidden = !(calib && !st.evento);
+      if (calib) {
+        $("g-calib-barra").style.width = `${(100 * calib[0]) / calib[1]}%`;
+        S.escribir($("g-calib-txt"), S.t("calib_progreso", { s: calib[0], total: calib[1] }));
+      }
+    }
+
+    function dibujarRec() {
+      const r = st.rec, d = st.decision;
+      const calib = calibrando();
+      $("rec-nivel").hidden = !r;
+      $("rec-pasos").hidden = !r;
+      $("rec-vacio").hidden = Boolean(r);
+      if (!r) {
+        S.escribir($("rec-vacio"), S.t(calib ? "rec_calibrando" : st.cerrado ? "frase_r4" : "rec_nada"));
+        $("rec-botones").hidden = $("rec-decide").hidden = $("rec-exito").hidden = $("rec-no").hidden = true;
+        return;
+      }
+      S.escribir($("rec-nivel"), S.t(`nivel_${r.nivel}`));
+      S.escribir($("rec-titulo"), r.repregunta && !d ? S.t("repregunta") : S.t("rec_titulo"));
+      const textos = r.pasos.map((p) => S.t(p));
+      const ol = $("rec-pasos");
+      if (ol.dataset.txt !== textos.join("|")) {
+        ol.replaceChildren(...textos.map((x) => Object.assign(document.createElement("li"), { textContent: x })));
+        ol.dataset.txt = textos.join("|");
+      }
+      const necesitaOk = r.nivel === "N2" && !d;
+      $("rec-botones").hidden = !necesitaOk;
+      $("rec-decide").hidden = !necesitaOk;
+      $("rec-exito").hidden = !(d && d.acepta);
+      $("rec-no").hidden = !(d && !d.acepta);
+      if (d && d.acepta) {
+        const arca = (d.acciones || []).includes("preparar_arca");
+        S.escribir($("rec-exito-txt"), S.t("hecho_si") + (arca ? " " + S.t("hecho_arca") : ""));
+        S.escribir($("rec-hora"), S.t("hecho_hora", { hora: S.formatearTm(S.tmDeT(d.t), true, false) }));
+      }
+      if (d && !d.acepta) S.escribir($("rec-no"), S.t("hecho_no"));
+    }
+
+    // El ARCA solo se prepara si el tripulante dijo «sí» (nivel N2). Es una propuesta: se muestra simulada.
+    function dibujarArca(reproducir) {
+      const d = st.decision;
+      const activo = Boolean(st.evento && d && d.acepta && (d.acciones || []).includes("preparar_arca"));
+      const caja = $("arca"), video = $("arca-video");
+      const antes = !caja.hidden;
+      caja.hidden = !activo;
+      if (!activo) { video.pause(); return; }
+      if (reproducir && !antes) {
+        video.currentTime = 0;
+        // con sonido si el navegador lo permite (el «sí» fue un clic); si no, en silencio
+        video.muted = false;
+        video.play().catch(() => { video.muted = true; video.play().catch(() => {}); });
+      }
+    }
+
+    function todo() { IND.forEach(dibujarFila); dibujarGeneral(); dibujarRec(); dibujarArca(false); }
+
+    S.on("vital", (v) => { if (otro) return; st.vital = v; IND.forEach(dibujarFila); });
+    S.on("gemelo", (g) => {
+      if (otro) return;
+      st.gemelo[g.indicador] = g;
+      dibujarFila(g.indicador);
+      if (g.indicador === "pulso") { dibujarGeneral(); dibujarRec(); }
+    });
+    S.on("evento", (e) => {
+      if (otro) return;
+      if (e.cierra) {
+        if (st.evento && st.evento.id === e.cierra) { st.evento = st.rec = st.decision = null; st.cerrado = true; }
+      } else if (e.regla === "R1" || e.regla === "R2") {
+        st.evento = e; st.cerrado = false;
+      }  // R3: nada en Mi estado
+      todo();
+    });
+    S.on("recomendacion", (r) => { if (otro) return; st.rec = r; if (r.repregunta) st.decision = null; dibujarRec(); dibujarGeneral(); });
+    S.on("decision", (d) => { if (otro) return; st.decision = d; dibujarRec(); dibujarArca(true); });
+    S.on("hola", (h) => {
+      st.evento = st.rec = st.decision = null;
+      otro = PEDIDO && PEDIDO !== h.tripulante ? PEDIDO : null;
+      const ficha = (h.tripulacion || []).find((f) => f.tripulante === (otro || h.tripulante));
+      setTimeout(() => {
+        if (otro) document.querySelectorAll("[data-tripulante]").forEach((el) => S.escribir(el, otro));
+        if (ficha) { $("ubicacion").dataset.i18n = `ub_${ficha.ubicacion}`; S.escribir($("ubicacion"), S.t(`ub_${ficha.ubicacion}`)); }
+      }, 0);
+    });
+    // compañero: un mensaje por segundo con todo su estado
+    S.on("tripulacion", (m) => {
+      if (!otro || m.tripulante !== otro) return;
+      st.vital = m.vital; st.gemelo = m.gemelo || {};
+      if (m.evento) { st.evento = m.evento; st.cerrado = false; }
+      else if (st.evento) { st.evento = null; st.cerrado = true; }
+      st.rec = m.evento ? m.recomendacion : null;
+      const antes = st.decision;
+      st.decision = m.evento ? m.decision : null;
+      todo();
+      if (st.decision && st.decision.acepta && !(antes && antes.acepta)) dibujarArca(true);
+    });
+    S.on("idioma", todo);
+
+    const decidir = (acepta) => st.evento && S.enviar("decision", Object.assign({ evento: st.evento.id, acepta }, otro ? { tripulante: otro } : {}));
+    $("b-si").onclick = () => decidir(true);
+    $("b-no").onclick = () => decidir(false);
+
+    crearFilas();
+    S.iniciar({ conSegundos: true });
+  </script>
+</body>
+</html>

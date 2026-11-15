@@ -1,0 +1,40 @@
+diff --git a/indextts/gpt/model_v2.py b/indextts/gpt/model_v2.py
+index 41e6872..b43eb73 100644
+--- a/indextts/gpt/model_v2.py
++++ b/indextts/gpt/model_v2.py
+@@ -459,7 +459,7 @@ class UnifiedVoice(nn.Module):
+                 num_heads=self.heads,
+                 head_dim=self.model_dim // self.heads,
+                 block_size=256,
+-                num_blocks=16,  # Reduce to save memory (16*256 = 4096 tokens capacity)
++                num_blocks=4,  # local patch for 6 GB GPUs: 4*256 = 1024 tokens, enough for one sentence
+                 use_cuda_graph=True,
+             )
+             print("acceleration engine initialized")
+diff --git a/indextts/infer_v2_5.py b/indextts/infer_v2_5.py
+index 2458379..7f569e4 100644
+--- a/indextts/infer_v2_5.py
++++ b/indextts/infer_v2_5.py
+@@ -172,7 +172,8 @@ class IndexTTS2:
+             aux_paths = ensure_models_available(self.model_dir)
+             w2v_bert_dir = aux_paths["w2v_bert"]
+         self.extract_features = SeamlessM4TFeatureExtractor.from_pretrained(w2v_bert_dir, local_files_only=True)
+-        self.semantic_model = Wav2Vec2BertModel.from_pretrained(w2v_bert_dir, local_files_only=True)
++        # local patch: load w2v-bert straight in bf16 so the fp32 copy never hits the GPU
++        self.semantic_model = Wav2Vec2BertModel.from_pretrained(w2v_bert_dir, local_files_only=True, torch_dtype=self.dtype)
+         self.semantic_model = self.semantic_model.to(self.device)
+         self.semantic_model.eval()
+         stat_mean_var = torch.load(os.path.join(self.model_dir, self.cfg.w2v_stat))
+@@ -820,10 +821,10 @@ class IndexTTS2:
+                     print(f"fix codes shape: {codes.shape}, codes type: {codes.dtype}")
+                     print(f"code len: {code_lens}")
+ 
+-                dtype = None
++                dtype = getattr(self, "s2mel_dtype", None)  # local patch: tunable
+                 with torch.amp.autocast(text_tokens.device.type, enabled=dtype is not None, dtype=dtype):
+                     m_start_time = time.perf_counter()
+-                    diffusion_steps = 25
++                    diffusion_steps = getattr(self, "diffusion_steps", 25)  # local patch: tunable
+                     inference_cfg_rate = 0.7
+                     S_infer = self.semantic_codec.decode(codes)
+                     target_lengths = torch.LongTensor([int(S_infer.shape[1] * 1.72 * duration_factor)]).to(codes.device)

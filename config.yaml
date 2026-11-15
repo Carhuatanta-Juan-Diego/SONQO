@@ -1,0 +1,74 @@
+modo: demo                 # demo | real
+idioma: es
+tripulante: MS-2
+mision:
+  dia_inicio: 214          # el reloj de misión arranca en el día 214, 03:12:00
+  hora_inicio: "03:12:00"
+camara:
+  fuente: video            # webcam | video | replay  (sin webcam: video de una cara; plan B: replay)
+  indice: 0
+  video: data/replay/cara.mp4
+  pulso_referencia_video: 54   # pulso que POS mide en ese video; el radar simulado lo sigue
+  vista_previa: true       # muestra la imagen en pantalla (solo en memoria, nunca se guarda)
+  ancho: 640
+  alto: 480
+  fps: 30
+profundidad:
+  tipo: replay             # realsense | replay
+  archivo: data/replay/resp.csv
+reproduccion:
+  caso: data/replay/caso.csv   # lo genera scripts/make_replay.py
+  velocidad: 1.0
+tripulacion:
+  companeros: true         # MS-1, MS-3 y MS-4 con sensores simulados (sin cámara)
+  rutina_s: {demo: 60, real: 1800}   # cada cuánto se guarda una medición de rutina de cada tripulante
+pulsera:
+  activa: true             # pulsera simple (pulso por PPG de muñeca + vibración), simulada
+radar_sim:
+  modo: normal             # normal | desvio | falla
+energia:
+  e1_periodo_s: {demo: 30, real: 600}
+  e1_duracion_s: {demo: 5, real: 10}
+  e2_periodo_s: {demo: 60, real: 1800}
+  e2_duracion_s: {demo: 20, real: 20}
+  umbral_radar_lpm: 8
+  vatios:
+    radar_activo: 0.36
+    radar_bajo: 0.064
+    termica: 0.14
+    termica_espera: 0.005
+    camara_rgb: 0.5
+    profundidad: 3.5
+    mcu: 0.03
+    hub: 2.0
+    ia: 15.0
+    hpc: 40.0
+  referencia_diseno: {promedio_w: 3.96, todo_encendido_w: 108}
+gemelo:
+  calibracion_s: {demo: 120, real: 86400}
+  vida_media_s: 3600
+  min_muestras_franja: 600
+  ancho_min: {pulso: 5, resp: 2, temp_piel: 0.2}
+  kalman: {pulso: {Q: 0.05, R: 4.0}, resp: {Q: 0.01, R: 1.0}, temp_piel: {Q: 0.0001, R: 0.01}}
+  alfa_conformal: 0.1
+  desvio_min_s: {demo: 10, real: 20}
+fusion:
+  ventana_s: 3
+  calidad_min: 0.5
+  tolerancia_pulso_lpm: 5
+motor:
+  techos:                  # nivel máximo por acción, fijado antes de la misión
+    registrar: N0
+    recomendar_reposo: N1
+    avisar_tierra: N2
+    preparar_arca: N2
+  repreguntar_s: {demo: 30, real: 300}
+enlace:
+  retraso_s: {demo: 8, real: 1320}
+  copias: 4
+  perdida: 0.0
+  tasa_bps: 500
+  tolerancias: {pulso: 2, resp: 1, temp_piel: 0.1}
+voz:
+  activa: true             # voz neuronal de la esfera (voz/arrancar.sh); si no está arriba, usa la del navegador
+  url: http://127.0.0.1:8801

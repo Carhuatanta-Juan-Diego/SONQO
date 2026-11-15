@@ -1,0 +1,11 @@
+# Python 3.11
+fastapi==0.115.6
+uvicorn[standard]==0.32.1
+pyyaml==6.0.2
+numpy==1.26.4
+scipy==1.13.1
+# mediapipe trae opencv-contrib-python (incluye cv2 y los detectores Haar del plan B)
+mediapipe==0.10.14
+opencv-contrib-python==4.10.0.84
+pytest==8.3.4
+# Opcional, solo si hay cámara RealSense: pip install pyrealsense2

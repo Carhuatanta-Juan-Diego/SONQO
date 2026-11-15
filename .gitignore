@@ -1,0 +1,19 @@
+# entorno y caché
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
+*.log
+
+# datos que genera cada corrida
+data/caja_negra/
+data/perfiles/
+
+# video de la cara (MIT, Eulerian Video Magnification): no se redistribuye; ver README
+data/replay/cara.mp4
+*.mp4.part
+
+# notas internas de trabajo
+CLAUDE.md
+MANUAL_PROTOTIPO_SONQO.md
+docs/superpowers/

@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SONQO · Tierra</title>
+  <link rel="stylesheet" href="/web/style.css?v=9">
+</head>
+<body class="tierra">
+  <div class="barra">
+    <div class="marca"><span class="logo"></span><span data-i18n="titulo_tierra">Centro médico · Tierra</span></div>
+    <div class="chips">
+      <span class="chip" id="reloj">—</span>
+      <span class="chip" data-conexion="no">sin conexión</span>
+    </div>
+  </div>
+
+  <main>
+    <p class="eyebrow" data-i18n="t_eyebrow">Lo que viaja a la Tierra</p>
+    <h2 class="titular" data-i18n="t_titular">Una emergencia completa cabe en 30 bytes.</h2>
+
+    <div class="viaje">
+      <div class="tarjeta">
+        <p class="nota" data-i18n="a_bordo">A BORDO</p>
+        <h3 data-i18n="a_bordo_t">Gemelo de cada tripulante</h3>
+        <p class="sub" data-i18n="a_bordo_s">predice cada medición; lo previsto no viaja</p>
+        <svg width="90" height="24" viewBox="0 0 90 24"><path d="M0 14 H32 L38 4 L44 22 L50 14 H90" stroke="#111" stroke-width="1.6" fill="none"/></svg>
+      </div>
+      <div class="ruta">
+        <div class="linea"></div>
+        <div id="bola" class="bola" style="left:0" hidden></div>
+        <div id="ruta-txt" class="txt"></div>
+      </div>
+      <div class="tarjeta negra">
+        <p class="nota" data-i18n="en_tierra">EN LA TIERRA</p>
+        <h3 data-i18n="en_tierra_t">Gemelo espejo</h3>
+        <p class="sub" data-i18n="en_tierra_s">la misma predicción, sin recibir los datos</p>
+        <svg width="90" height="24" viewBox="0 0 90 24"><path d="M0 14 H32 L38 4 L44 22 L50 14 H90" stroke="#fff" stroke-width="1.6" fill="none"/></svg>
+      </div>
+    </div>
+
+    <section class="tarjeta negra" style="margin-top:18px">
+      <p id="vacio" class="sub" style="margin:0" data-i18n="sin_tarjetas">Todavía no llega ninguna tarjeta T-30.</p>
+      <div id="tarjeta" hidden>
+        <p class="nota" style="margin:0" data-i18n="t_ultima">ÚLTIMA T-30 RECIBIDA</p>
+        <div id="bytes" class="bytes"></div>
+        <p style="margin:0;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+          <span id="crc" class="insignia verde"></span>
+          <span id="identica" class="insignia verde"></span>
+          <span id="llego" class="nota"></span>
+          <span id="prueba" class="insignia" hidden data-i18n="prueba"></span>
+        </p>
+        <p id="resumen" class="resumen-t30"></p>
+        <p id="evento" class="sub"></p>
+        <details>
+          <summary data-i18n="t_ver_campos">Ver los 27 campos decodificados</summary>
+          <table style="margin-top:8px">
+            <thead><tr><th data-i18n="t_campo">Campo</th><th data-i18n="t_valor">Valor</th><th data-i18n="t_significado">Significado</th></tr></thead>
+            <tbody id="campos"></tbody>
+          </table>
+        </details>
+      </div>
+    </section>
+
+    <div class="rejilla r2" style="margin-top:16px">
+      <section class="tarjeta">
+        <h3 data-i18n="t_comparar">T-30 frente a JSON</h3>
+        <p class="sub" id="comparacion"></p>
+        <div id="barras"></div>
+      </section>
+      <section class="tarjeta">
+        <h3 data-i18n="t_espejo_titulo">Contador del gemelo espejo</h3>
+        <p class="sub" data-i18n="t_espejo_sub">Solo viaja lo que el gemelo no predijo.</p>
+        <div class="cifras">
+          <div><span data-i18n="espejo_enviado">enviado</span><b id="esp-b">—</b></div>
+          <div><span data-i18n="espejo_todo">si se enviara todo</span><b id="esp-t">—</b></div>
+        </div>
+        <p class="nota" data-i18n="espejo_ref"></p>
+      </section>
+    </div>
+  </main>
+
+  <footer data-i18n="pie">Prototipo estudiantil · NASA Space Apps Challenge 2026 · No es un dispositivo médico</footer>
+
+  <script src="/web/common.js?v=9"></script>
+  <script>
+    const S = SONQO;
+    const $ = (id) => document.getElementById(id);
+    const st = { enviada: null, recibida: null, salida: null, llega: null, espejo: null };
+    const ORDEN = ["ver", "crew", "t_mission_s", "seq", "event", "severity", "confidence", "onset_s", "d_hr",
+      "d_rr", "d_temp", "spo2_contact", "sys_bp", "dia_bp", "avpu", "protocol", "step", "autonomy", "drug1",
+      "dose1", "drug2", "dose2", "rad_dose", "need_decision", "question", "sample_id", "bb_hash"];
+
+    function viaje() {
+      const bola = $("bola");
+      if (!st.llega) {
+        bola.hidden = true;
+        S.escribir($("ruta-txt"), S.t("ruta_espera", { s: st.enviada ? S.num(st.enviada.retraso_s, 0) : "8" }));
+        return;
+      }
+      const ahora = performance.now();
+      const frac = Math.min(1, (ahora - st.salida) / (st.llega - st.salida));
+      bola.hidden = false;
+      bola.style.left = `${100 * frac}%`;
+      S.escribir($("ruta-txt"), S.t("en_camino", { s: S.num(Math.max(0, (st.llega - ahora) / 1000), 1) }));
+    }
+
+    function valorCampo(nombre, v) {
+      if (nombre === "bb_hash") return "0x" + Math.round(v).toString(16).padStart(8, "0");
+      if (nombre === "t_mission_s") return `${S.num(v, 0)} (${S.formatearTm(v)})`;
+      if (nombre === "crew") return `MS-${v}`;
+      if (nombre === "autonomy") return `N${v}`;
+      return S.num(v, Number.isInteger(v) ? 0 : 2);
+    }
+
+    function dibujarTarjeta() {
+      const r = st.recibida;
+      if (!r) return;
+      $("vacio").hidden = true;
+      $("tarjeta").hidden = false;
+      $("prueba").hidden = !(st.enviada && st.enviada.prueba && st.enviada.envio === r.envio);
+      $("bytes").replaceChildren(...r.hex.split(" ").map((b, i) =>
+        Object.assign(document.createElement("span"), { textContent: b, className: i >= 28 ? "crc" : "" })));
+      S.escribir($("crc"), S.t(r.crc_ok ? "crc_ok" : "crc_mal"));
+      $("crc").className = "insignia " + (r.crc_ok ? "verde" : "rojo");
+      S.escribir($("identica"), S.t(r.identica ? "identica" : "no_identica"));
+      $("identica").className = "insignia " + (r.identica ? "verde" : "rojo");
+      S.escribir($("llego"), S.t("llego", { s: S.num(r.retraso_s, 1), k: r.copia + 1, n: st.enviada ? st.enviada.copias : 4 }));
+      const c = r.campos;
+      S.escribir($("resumen"), S.t("t_resumen", {
+        crew: `MS-${c.crew}`, dhr: S.num(Math.abs(c.d_hr), 0), lado: S.t(c.d_hr >= 0 ? "t_sobre" : "t_bajo"),
+        sev: c.severity, conf: S.num((100 * c.confidence) / 15, 0), pide: S.t(c.need_decision ? "t_pide" : "t_no_pide"),
+      }));
+      S.escribir($("evento"), S.t("t_evento", { e: S.t(`evento_${c.event}`) }));
+      $("campos").replaceChildren(...ORDEN.map((n) => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = "<td class='mono'></td><td class='num'></td><td></td>";
+        tr.children[0].textContent = n;
+        tr.children[1].textContent = valorCampo(n, c[n]);
+        tr.children[2].textContent = S.t(`campo_${n}`);
+        return tr;
+      }));
+    }
+
+    function barra(etq, valor, max, color) {
+      const d = document.createElement("div");
+      d.style.margin = "8px 0";
+      d.innerHTML = `<div class="chico" style="display:flex;justify-content:space-between"><span></span><b class="num"></b></div>
+        <div class="progreso"><i style="width:${Math.max(1.5, (100 * valor) / max)}%;background:${color}"></i></div>`;
+      d.querySelector("span").textContent = etq;
+      return d;
+    }
+
+    function dibujarPie() {
+      const e = st.enviada;
+      const bps = e ? e.tasa_bps : 500, copias = e ? e.copias : 4;
+      const t30 = (30 * 8 * copias) / bps, json = (587 * 8 * copias) / bps;
+      S.escribir($("comparacion"), S.t("t_comparacion", { bps, copias, t30: S.num(t30, 1), json: S.num(json, 1) }));
+      const b1 = barra("T-30", 30, 587, "var(--verde)"), b2 = barra("JSON", 587, 587, "var(--gris2)");
+      b1.querySelector("b").textContent = `30 bytes · ${S.num(t30, 1)} s`;
+      b2.querySelector("b").textContent = `587 bytes · ${S.num(json, 1)} s`;
+      $("barras").replaceChildren(b1, b2);
+      if (st.espejo) {
+        S.escribir($("esp-b"), `${S.num(st.espejo.bytes_dia / 1000, 1)} KB/${S.t("dia_corto")}`);
+        S.escribir($("esp-t"), `${S.num(st.espejo.bytes_dia_todo / 1000, 0)} KB/${S.t("dia_corto")}`);
+      }
+    }
+
+    S.on("t30", (d) => {
+      if (d.fase === "enviada") {
+        st.enviada = d;
+        const restante = d.llega_en_s === null ? null : d.llega_en_s - ((S.tAhora() ?? d.t) - d.t);
+        st.salida = performance.now() - ((S.tAhora() ?? d.t) - d.t) * 1000;
+        st.llega = restante === null || restante <= 0 ? null : performance.now() + restante * 1000;
+      } else if (d.fase === "recibida") {
+        st.recibida = d;
+        st.llega = null;
+        dibujarTarjeta();
+      } else if (d.fase === "espejo") {
+        st.espejo = d;
+      }
+      viaje(); dibujarPie();
+    });
+    S.on("idioma", () => { dibujarTarjeta(); dibujarPie(); viaje(); });
+    setInterval(viaje, 100);
+    S.iniciar({ conSegundos: true });
+  </script>
+</body>
+</html>
